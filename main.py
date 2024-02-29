@@ -1,85 +1,66 @@
-import os
-import sys
 import random
-
 import pygame
 
-pygame.init()
+
+class Ball(pygame.sprite.Sprite):
+    def __init__(self, radius, x, y):
+        super().__init__(all_sprites)
+        self.radius = radius
+        self.radius = radius
+        self.image = pygame.Surface((2 * radius, 2 * radius), pygame.SRCALPHA, 32)
+        pygame.draw.circle(self.image, pygame.Color("red"), (radius, radius), radius)
+        self.rect = pygame.Rect(x, y, 2 * radius, 2 * radius)
+        self.vx = random.randint(-5, 5)
+        self.vy = random.randrange(-5, 5)
+
+    def update(self):
+        self.rect = self.rect.move(self.vx, self.vy)
+        if pygame.sprite.spritecollideany(self, horizontal_borders):
+            self.vy = -self.vy
+        if pygame.sprite.spritecollideany(self, vertical_borders):
+            self.vx = -self.vx
 
 
-def load_image(name, colorkey=None):
-    fullname = os.path.join('data', name)
-    if not os.path.isfile(fullname):
-        print(f"Файл с изображением '{fullname}' не найден")
-        sys.exit()
+class Border(pygame.sprite.Sprite):
+    def __init__(self, x1, y1, x2, y2):
+        super().__init__(all_sprites)
+        if x1 == x2:
+            self.add(vertical_borders)
+            self.image = pygame.Surface([1, y2 - y1])
+            self.rect = pygame.Rect(x1, y1, 1, y2 - y1)
+        else:
+            self.add(horizontal_borders)
+            self.image = pygame.Surface([x2 - x1, 1])
+            self.rect = pygame.Rect(x1, y1, x2 - x1, 1)
 
-    image = pygame.image.load(fullname)
-    if colorkey is not None:
-        image = image.convert()
-        if colorkey == -1:
-            colorkey = image.get_at((0, 0))
-        image.set_colorkey(colorkey)
-    else:
-        image = image.convert_alpha()
-    return image
-
-
-FRAMES_PER_SECOND = 50
-clock = pygame.time.Clock()
-
-size = width, height = 500, 500
-screen = pygame.display.set_mode(size)
 
 all_sprites = pygame.sprite.Group()
 
+horizontal_borders = pygame.sprite.Group()
+vertical_borders = pygame.sprite.Group()
 
-class Bomb(pygame.sprite.Sprite):
-    image = pygame.transform.scale(load_image("bomb.png"), (50, 50))
-    image_boom = pygame.transform.scale(load_image("boom.png"), (50, 50))
+size = width, height = 400, 300
+screen = pygame.display.set_mode(size)
 
-    def __init__(self, group):
-        super().__init__(group)
-        self.image = Bomb.image
-        self.rect = self.image.get_rect()
-        self.rect.x = random.randrange(width - 100)
-        self.rect.y = random.randrange(height - 100)
-        self.mask = pygame.mask.from_surface(self.image)
-        while True:
-            f = True
-            self.rect.x = random.randrange(width - 100)
-            self.rect.y = random.randrange(height - 100)
-            for b in bombs:
-                if pygame.sprite.collide_mask(self, b):
-                    f = False
-                    break
-            if f:
-                break
+Border(5, 5, width - 5, 5)
+Border(5, height - 5, width - 5, height - 5)
+Border(5, 5, 5, height - 5)
+Border(width - 5, 5, width - 5, height - 5)
 
-    def update(self, *args):
-        if args and args[0].type == pygame.MOUSEBUTTONDOWN and \
-                self.rect.collidepoint(args[0].pos):
-            self.image = self.image_boom
+for i in range(10):
+    Ball(20, 100, 100)
 
-
-bombs = []
-for _ in range(20):
-    bombs.append(Bomb(all_sprites))
+clock = pygame.time.Clock()
 
 running = True
 while running:
-    events = pygame.event.get()
-    for event in events:
+    for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            for bomb in all_sprites:
-                all_sprites.update(event)
-
-    screen.fill((0, 0, 0))
+    screen.fill(pygame.Color("white"))
     all_sprites.draw(screen)
-
-    clock.tick(50)
-
+    all_sprites.update()
     pygame.display.flip()
+    clock.tick(50)
 
 pygame.quit()
