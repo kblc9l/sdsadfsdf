@@ -1,17 +1,18 @@
-import pygame
 import os
 import sys
+import random
+
+import pygame
 
 pygame.init()
-SIZE = WIDTH, HEIGHT = 789, 300
-SCREEN = pygame.display.set_mode(SIZE)
 
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
-        print(f'Файл с изображением {fullname} не найден')
+        print(f"Файл с изображением '{fullname}' не найден")
         sys.exit()
+
     image = pygame.image.load(fullname)
     if colorkey is not None:
         image = image.convert()
@@ -23,55 +24,62 @@ def load_image(name, colorkey=None):
     return image
 
 
-class Mountain(pygame.sprite.Sprite):
-    image = load_image("mountains.png")
-
-    def __init__(self):
-        super().__init__(all_sprites)
-        self.image = Mountain.image
-        self.rect = self.image.get_rect()
-
-        self.mask = pygame.mask.from_surface(self.image)
-
-        self.rect.bottom = HEIGHT
-
-
-class Landing(pygame.sprite.Sprite):
-    image = load_image("pt.png")
-
-    def __init__(self, pos):
-        super().__init__(all_sprites)
-        self.image = Landing.image
-        self.rect = self.image.get_rect()
-
-        self.mask = pygame.mask.from_surface(self.image)
-        self.rect.x = pos[0]
-        self.rect.y = pos[1]
-
-    def update(self):
-        if not pygame.sprite.collide_mask(self, mountain):
-            self.rect = self.rect.move(0, 1)
-
-
-# def main():
+FRAMES_PER_SECOND = 50
 clock = pygame.time.Clock()
-pygame.display.set_caption('Десант')
+
+size = width, height = 500, 500
+screen = pygame.display.set_mode(size)
+
 all_sprites = pygame.sprite.Group()
 
-mountain = Mountain()
+
+class Bomb(pygame.sprite.Sprite):
+    image = pygame.transform.scale(load_image("bomb.png"), (50, 50))
+    image_boom = pygame.transform.scale(load_image("boom.png"), (50, 50))
+
+    def __init__(self, group):
+        super().__init__(group)
+        self.image = Bomb.image
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randrange(width - 100)
+        self.rect.y = random.randrange(height - 100)
+        self.mask = pygame.mask.from_surface(self.image)
+        while True:
+            f = True
+            self.rect.x = random.randrange(width - 100)
+            self.rect.y = random.randrange(height - 100)
+            for b in bombs:
+                if pygame.sprite.collide_mask(self, b):
+                    f = False
+                    break
+            if f:
+                break
+
+    def update(self, *args):
+        if args and args[0].type == pygame.MOUSEBUTTONDOWN and \
+                self.rect.collidepoint(args[0].pos):
+            self.image = self.image_boom
+
+
+bombs = []
+for _ in range(20):
+    bombs.append(Bomb(all_sprites))
+
 running = True
 while running:
-
-    for event in pygame.event.get():
-
+    events = pygame.event.get()
+    for event in events:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            Landing(event.pos)
+            for bomb in all_sprites:
+                all_sprites.update(event)
 
-    SCREEN.fill("white")
-    all_sprites.draw(SCREEN)
-    all_sprites.update()
-    clock.tick(30)
+    screen.fill((0, 0, 0))
+    all_sprites.draw(screen)
+
+    clock.tick(50)
+
     pygame.display.flip()
+
 pygame.quit()
